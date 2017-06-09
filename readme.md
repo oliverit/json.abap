@@ -23,7 +23,7 @@ write : / 'True: ',   json_ref->get_boolean( 'true_attr' ).
 write : / 'False: ',  json_ref->get_boolean( 'false_attr' ).
 ```
 
-![Debug Table](http://imgur.com/cB3L65P)
+![Debug Table](http://i.imgur.com/cB3L65P.jpg)
 
 ![Output](http://i.imgur.com/NIp3lz6.jpg)
 
