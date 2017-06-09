@@ -1,0 +1,21 @@
+class yea_json_types definition
+  public
+  final
+  create public .
+
+  public section.
+    constants type_string type i value 1.                   "#EC NOTEXT
+    constants type_number type i value 2.                   "#EC NOTEXT
+    constants type_boolean type i value 3.                  "#EC NOTEXT
+    constants type_null type i value 4.                     "#EC NOTEXT
+    constants type_object type i value 5.                   "#EC NOTEXT
+    constants type_array type i value 6.                    "#EC NOTEXT
+  protected section.
+  private section.
+endclass.
+
+
+
+class yea_json_types implementation.
+endclass.
+

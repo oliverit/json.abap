@@ -1,0 +1,553 @@
+class yea_json_parser definition
+  public
+  final
+  create public .
+
+  public section.
+
+    class-methods class_constructor .
+    class-methods serialize
+      importing
+        !json            type ref to yea_json_value
+      returning
+        value(returning) type string .
+    class-methods deserialize
+      importing
+        !string          type string
+      returning
+        value(returning) type ref to yea_json_value .
+  protected section.
+  private section.
+
+    class-data _utf8_converter type ref to cl_abap_conv_out_ce .
+
+    class-methods _serialize_null
+      importing
+        !null            type ref to yea_json_null
+      returning
+        value(returning) type string .
+    class-methods _serialize_boolean
+      importing
+        !boolean         type ref to yea_json_boolean
+      returning
+        value(returning) type string .
+    class-methods _serialize_string
+      importing
+        !string          type ref to yea_json_string
+      returning
+        value(returning) type string .
+    class-methods _serialize_number
+      importing
+        !number          type ref to yea_json_number
+      returning
+        value(returning) type string .
+    class-methods _serialize_array
+      importing
+        !array           type ref to yea_json_array
+      returning
+        value(returning) type string .
+    class-methods _serialize_object
+      importing
+        !object          type ref to yea_json_object
+      returning
+        value(returning) type string .
+    class-methods _serialize_pair
+      importing
+        !pair            type ref to yea_json_pair
+      returning
+        value(returning) type string .
+    class-methods _utf8_byte
+      importing
+        !char            type char1
+      returning
+        value(returning) type xstring .
+endclass.
+
+
+
+class yea_json_parser implementation.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method YEA_JSON_PARSER=>CLASS_CONSTRUCTOR
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method class_constructor.
+    _utf8_converter = cl_abap_conv_out_ce=>create( encoding = 'UTF-8' ).
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method YEA_JSON_PARSER=>DESERIALIZE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] STRING                         TYPE        STRING
+* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_VALUE
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method deserialize.
+
+    data next type abap_bool.
+    data state type c.
+    data char type c.
+    data number type f.
+    data byte_value type xstring.
+    data ap type i.
+
+    data kv_mode type abap_bool value abap_true. " True is key
+    data key_bucket type string.
+    data number_bucket type string.
+
+    data(position) = 0.
+    data(limit) = strlen( string ).
+
+    data top_ref type ref to yea_json_value.
+    data co_ref type ref to yea_json_object.
+    data ca_ref type ref to yea_json_array.
+    data stack   type table of ref to yea_json_value.
+    data prev_char type c.
+
+    while position < limit.
+
+      char = string+position(1).
+      byte_value = _utf8_byte( char ).
+
+      if ( byte_value <= '20' or ( byte_value >= '7F' and byte_value <= 'C2A0' ) ).
+
+        position = position + 1.
+        continue.
+      endif.
+
+      case char.
+        when '{'. " Object Open
+
+          " Push new object
+          data(new_object) = new yea_json_object( ).
+          append new_object to stack.
+          if ( top_ref is bound and top_ref->type( ) = yea_json_types=>type_array ).
+            ca_ref ?= top_ref.
+            ca_ref->append( new_object ).
+          elseif ( top_ref is bound and top_ref->type( ) = yea_json_types=>type_object ) .
+            co_ref ?= top_ref.
+            if ( key_bucket is initial ).
+              return.
+            endif.
+            co_ref->add( new yea_json_pair( name = key_bucket value = new_object ) ).
+          endif.
+          clear key_bucket.
+          top_ref = new_object.
+          state = '{'.
+
+        when '}'. " Object Close
+
+          if ( state is initial ).
+            return.
+          endif.
+
+          if ( state = ',' or state = ':' ).
+            return.
+          endif.
+
+          " Pop top object
+          data(pop_object) = stack[ lines( stack ) ].
+          if ( lines( stack ) = 1 ).
+            ap = position + 1.
+            delete stack index lines( stack ).
+            if ( lines( stack ) = 0 and ap < limit ).
+              return.
+            endif.
+            exit.
+          endif.
+          delete stack index lines( stack ).
+          read table stack index lines( stack ) into top_ref.
+          state = '}'.
+
+        when '['. " Array Open
+
+          " Push new array
+          data(new_array) = new yea_json_array( ).
+          append new_array to stack.
+          if ( top_ref is bound and top_ref->type( ) = yea_json_types=>type_array ).
+            ca_ref ?= top_ref.
+            ca_ref->append( new_array ).
+          elseif ( top_ref is bound and top_ref->type( ) = yea_json_types=>type_object ) .
+            co_ref ?= top_ref.
+            if ( key_bucket is initial ).
+              return.
+            endif.
+            co_ref->add( new yea_json_pair( name = key_bucket value = new_array ) ).
+          endif.
+          clear key_bucket.
+          top_ref = new_array.
+          state = '['.
+
+        when ']'. " Array Close
+
+          if ( state is initial ).
+            return.
+          endif.
+
+          if ( lines( stack ) = 0 ).
+            return.
+          endif.
+
+          if ( state = ',' or state = ':' ).
+            return.
+          endif.
+
+          " Pop top array
+          data(pop_array) = stack[ lines( stack ) ].
+          if ( lines( stack ) = 1 ).
+            ap = position + 1.
+            delete stack index lines( stack ).
+            if ( lines( stack ) = 0 and ap < limit ).
+              return.
+            endif.
+            exit.
+          endif.
+          delete stack index lines( stack ).
+          read table stack index lines( stack ) into top_ref.
+          state = ']'.
+
+        when '"'. " String Value
+          " Scan to the next character
+          data(escape) = abap_false.
+          data(string_start) = position.
+          while position < limit.
+            position = position + 1.
+            if ( position = limit ).
+              return.
+            endif.
+            char = string+position(1).
+            byte_value = _utf8_byte( char ).
+            if ( escape = abap_true ).
+              escape = abap_false.
+              continue.
+            elseif ( char = '\' ).
+              escape = abap_true.
+              continue.
+            elseif ( char = '"' ).
+              data result type string.
+              data(delta) = ( position - string_start ).
+              data(ns) = string_start + 1.
+              data(nd) = delta - 1.
+              result = string+ns(nd).
+              exit.
+            endif.
+          endwhile.
+          if ( state = ':' ).
+            co_ref ?= top_ref.
+            co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_string( result ) ) ).
+            clear: key_bucket.
+          elseif ( state = '[' ).
+            ca_ref ?= top_ref.
+            ca_ref->append( new yea_json_string( result ) ).
+          elseif ( state = '{' or state = ',' ).
+            case top_ref->type( ).
+              when yea_json_types=>type_array.
+                ca_ref ?= top_ref.
+                ca_ref->append( new yea_json_string( result ) ).
+              when yea_json_types=>type_object.
+                key_bucket = result.
+            endcase.
+          else.
+            return.
+          endif.
+          clear result.
+          state = '"'.
+
+        when ':'. " Key:Value Seperator
+          if ( top_ref is bound and top_ref->type( ) <> yea_json_types=>type_object ).
+            return.
+          endif.
+
+          if ( state <> '"' and state <> '[' ).
+            return.
+          endif.
+          state = ':'.
+        when ','. " Value Separator
+          state = ','.
+        when others.
+
+          data(offset) = 0.
+          data(outlen) = position.
+          if ( char = 't' or char = 'n' ).
+            outlen = position + 4.
+          elseif ( char = 'f' ).
+            outlen = position + 5.
+          endif.
+          if ( outlen > limit ).
+            return.
+          endif.
+          if ( char co '-+.0123456789Etfn' ).
+          else.
+            " Not allowed
+            return.
+          endif.
+          if ( limit > ( position + 4 ) and string+position(4) = 'true' ).
+            position = position + 3.
+            if ( state = ':' ).
+              co_ref ?= top_ref.
+              co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_boolean( abap_true ) ) ).
+              clear key_bucket.
+            elseif ( state = '[' ).
+              ca_ref ?= top_ref.
+              ca_ref->append( new yea_json_boolean( abap_true ) ).
+            elseif ( state = ',' ).
+              case top_ref->type( ).
+                when yea_json_types=>type_object.
+                  co_ref ?= top_ref.
+                  co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_boolean( abap_true ) ) ).
+                  clear key_bucket.
+                when yea_json_types=>type_array.
+                  ca_ref ?= top_ref.
+                  ca_ref->append( new yea_json_boolean( abap_true ) ).
+              endcase.
+            endif.
+
+          elseif ( limit > ( position + 5 ) and string+position(5) = 'false' ).
+            position = position + 4.
+            if ( state = ':' ).
+              co_ref ?= top_ref.
+              co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_boolean( abap_false ) ) ).
+              clear key_bucket.
+            elseif ( state = '[' ).
+              ca_ref ?= top_ref.
+              ca_ref->append( new yea_json_boolean( abap_false ) ).
+            elseif ( state = ',' ).
+              case top_ref->type( ).
+                when yea_json_types=>type_object.
+                  co_ref ?= top_ref.
+                  co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_boolean( abap_false ) ) ).
+                  clear key_bucket.
+                when yea_json_types=>type_array.
+                  ca_ref ?= top_ref.
+                  ca_ref->append( new yea_json_boolean( abap_false ) ).
+              endcase.
+            endif.
+          elseif ( limit > ( position + 4 ) and string+position(4) = 'null' ).
+            position = position + 3.
+            if ( state = ':' ).
+              co_ref ?= top_ref.
+              co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_null( ) ) ).
+              clear key_bucket.
+            elseif ( state = '[' ).
+              ca_ref ?= top_ref.
+              ca_ref->append( new yea_json_null( ) ).
+            elseif ( state = ',' ).
+              case top_ref->type( ).
+                when yea_json_types=>type_object.
+                  co_ref ?= top_ref.
+                  co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_null( ) ) ).
+                  clear key_bucket.
+                when yea_json_types=>type_array.
+                  ca_ref ?= top_ref.
+                  ca_ref->append( new yea_json_null( ) ).
+              endcase.
+            endif.
+          elseif ( char co '-+.0123456789E' ).
+            " Scan until next value isn't a digit
+            number_bucket = char.
+            while position < limit.
+              position = position + 1.
+              if ( position >= limit ).
+                return.
+              endif.
+
+              char = string+position(1).
+              byte_value = _utf8_byte( char ).
+              if ( char co '-+.0123456789E' ).
+                number_bucket = number_bucket && char.
+              else.
+                exit.
+              endif.
+            endwhile.
+            number = number_bucket.
+            if ( state = ':' ).
+              co_ref ?= top_ref.
+              co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_number( number ) ) ).
+              clear key_bucket.
+            elseif ( state = '[' ).
+              ca_ref ?= top_ref.
+              ca_ref->append( new yea_json_number( number ) ).
+            elseif ( state = ',' ).
+              case top_ref->type( ).
+                when yea_json_types=>type_object.
+                  if ( key_bucket is initial ).
+                    return.
+                  endif.
+                  co_ref ?= top_ref.
+                  co_ref->add( new yea_json_pair( name = key_bucket value = new yea_json_number( number ) ) ).
+                  clear key_bucket.
+                when yea_json_types=>type_array.
+                  ca_ref ?= top_ref.
+                  ca_ref->append( new yea_json_number( number ) ).
+              endcase.
+            endif.
+            position = position - 1.
+          else.
+            return.
+          endif.
+          state = '+'.
+      endcase.
+      position = position + 1.
+    endwhile.
+    if ( lines( stack ) = 0 and key_bucket is initial ).
+      returning = top_ref.
+    endif.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method YEA_JSON_PARSER=>SERIALIZE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] JSON                           TYPE REF TO YEA_JSON_VALUE
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method serialize.
+    data(type) = json->type( ).
+    case type.
+      when yea_json_types=>type_null.
+        returning = _serialize_null( cast yea_json_null( json ) ).
+      when yea_json_types=>type_boolean.
+        returning = _serialize_boolean( cast yea_json_boolean( json ) ).
+      when yea_json_types=>type_number.
+        returning = _serialize_number( cast yea_json_number( json ) ).
+      when yea_json_types=>type_string.
+        returning = _serialize_string( cast yea_json_string( json ) ).
+      when yea_json_types=>type_array.
+        returning = _serialize_array( cast yea_json_array( json ) ).
+      when yea_json_types=>type_object.
+        returning = _serialize_object( cast yea_json_object( json ) ).
+    endcase.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_ARRAY
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] ARRAY                          TYPE REF TO YEA_JSON_ARRAY
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_array.
+    data(size) = array->size( ).
+    data(index) = 1.
+    data output type string.
+    do size times.
+      data(el) = array->get( index ).
+      data(el_text) = serialize( el ).
+      if ( index = size ).
+        output = output && el_text.
+      else.
+        output = output && el_text && ','.
+      endif.
+      index = index + 1.
+    enddo.
+    returning = '[' && output && ']'.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_BOOLEAN
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] BOOLEAN                        TYPE REF TO YEA_JSON_BOOLEAN
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_boolean.
+    case boolean->get( ).
+      when abap_true.
+        returning = 'true'.
+      when others.
+        returning = 'false'.
+    endcase.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_NULL
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] NULL                           TYPE REF TO YEA_JSON_NULL
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_null.
+    returning = 'null'.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_NUMBER
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] NUMBER                         TYPE REF TO YEA_JSON_NUMBER
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_number.
+    returning = number->get( ).
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_OBJECT
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] OBJECT                         TYPE REF TO YEA_JSON_OBJECT
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_object.
+    data tpl type string value '"%1":%2'.
+    data template type string.
+    data(keys) = object->keys( ).
+    data json_pairs type stringtab.
+    loop at keys assigning field-symbol(<key>).
+      data(pair) = object->get( <key> ).
+      template = tpl.
+      replace first occurrence of '%1' in template with pair->name( ).
+      replace first occurrence of '%2' in template with serialize( pair->value( ) ).
+      append template to json_pairs.
+    endloop.
+    data(index) = 1.
+    data output_line type string.
+    do lines( keys ) times.
+      read table json_pairs index index assigning field-symbol(<jp>).
+      if ( index = lines( keys ) ).
+        output_line = output_line && <jp>.
+      else.
+        output_line = output_line && <jp> && ','.
+      endif.
+      index = index + 1.
+    enddo.
+    returning = '{' && output_line && '}'.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_PAIR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] PAIR                           TYPE REF TO YEA_JSON_PAIR
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_pair.
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_STRING
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] STRING                         TYPE REF TO YEA_JSON_STRING
+* | [<-()] RETURNING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _serialize_string.
+    returning = '"' && string->get( ) && '"'.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method YEA_JSON_PARSER=>_UTF8_BYTE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] CHAR                           TYPE        CHAR1
+* | [<-()] RETURNING                      TYPE        XSTRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method _utf8_byte.
+    _utf8_converter->reset( ).
+    _utf8_converter->write( data = char ).
+    returning = _utf8_converter->get_buffer( ).
+  endmethod.
+endclass.
+

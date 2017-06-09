@@ -1,0 +1,7 @@
+interface yea_json_value
+  public .
+  methods type
+    returning
+      value(returning) type i .
+endinterface.
+

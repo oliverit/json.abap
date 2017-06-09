@@ -1,0 +1,203 @@
+class yea_json_array definition
+  public
+  final
+  create public .
+
+  public section.
+
+    interfaces yea_json_value .
+
+    methods append
+      importing
+        !value type ref to yea_json_value .
+    methods remove
+      importing
+        !value           type ref to yea_json_value
+      returning
+        value(returning) type abap_bool .
+    methods get
+      importing
+        !index           type int4
+      returning
+        value(returning) type ref to yea_json_value .
+    methods size
+      returning
+        value(returning) type int4 .
+    methods to_string
+      importing
+        !index           type int4
+      returning
+        value(returning) type string .
+    methods to_int
+      importing
+        !index           type int4
+      returning
+        value(returning) type int4 .
+    methods to_float
+      importing
+        !index           type int4
+      returning
+        value(returning) type f .
+    methods to_boolean
+      importing
+        !index           type int4
+      returning
+        value(returning) type abap_bool .
+    methods to_object
+      importing
+        !index           type int4
+      returning
+        value(returning) type ref to yea_json_object .
+    methods to_array
+      importing
+        !index           type int4
+      returning
+        value(returning) type ref to yea_json_array .
+  protected section.
+  private section.
+
+    types: __lvalue type standard table of ref to yea_json_value.
+    data: _values type __lvalue.
+
+endclass.
+
+
+
+class yea_json_array implementation.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_ARRAY->APPEND
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] VALUE                          TYPE REF TO YEA_JSON_VALUE
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method append.
+    append value to _values.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_ARRAY->GET
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] INDEX                          TYPE        INT4
+* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_VALUE
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method get.
+    try.
+        returning = _values[ index ].
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_ARRAY->REMOVE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] VALUE                          TYPE REF TO YEA_JSON_VALUE
+* | [<-()] RETURNING                      TYPE        ABAP_BOOL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method remove.
+    delete _values where table_line = value.
+    check sy-subrc = 0.
+    returning = abap_true.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_ARRAY->SIZE
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RETURNING                      TYPE        INT4
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method size.
+    returning = lines( _values ).
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method YEA_JSON_ARRAY->TO_ARRAY
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method to_array.
+    try.
+        data(idx) = index + 1.
+        returning = cast yea_json_array( _values[ idx ] ).
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method YEA_JSON_ARRAY->TO_BOOLEAN
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method to_boolean.
+    try.
+        data(idx) = index + 1.
+        returning = cast yea_json_boolean( _values[ idx ] )->get( ).
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method YEA_JSON_ARRAY->TO_FLOAT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method to_float.
+    try.
+        data(idx) = index + 1.
+        returning = cast yea_json_number( _values[ idx ] )->get( ).
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method YEA_JSON_ARRAY->TO_INT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method to_int.
+    try.
+        data(idx) = index + 1.
+        returning = cast yea_json_number( _values[ idx ] )->get( ).
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method YEA_JSON_ARRAY->TO_OBJECT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method to_object.
+    try.
+        data(idx) = index + 1.
+        returning = cast yea_json_object( _values[ idx ] ).
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method YEA_JSON_ARRAY->TO_STRING
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method to_string.
+    try.
+        data(idx) = index + 1.
+        returning = cast yea_json_string( _values[ idx ] )->get( ).
+      catch cx_root.
+    endtry.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_ARRAY->YEA_JSON_VALUE~TYPE
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RETURNING                      TYPE        I
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method yea_json_value~type.
+    returning = yea_json_types=>type_array.
+  endmethod.
+endclass.
+

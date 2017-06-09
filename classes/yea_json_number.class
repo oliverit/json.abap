@@ -1,0 +1,69 @@
+class yea_json_number definition
+  public
+  final
+  create public .
+
+  public section.
+
+    interfaces yea_json_value .
+
+    methods constructor
+      importing
+        !value type f optional .
+    methods get
+      returning
+        value(returning) type f .
+    methods set
+      importing
+        !value type f .
+  protected section.
+  private section.
+
+    data _value type f .
+endclass.
+
+
+
+class yea_json_number implementation.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_NUMBER->CONSTRUCTOR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] VALUE                          TYPE        F(optional)
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method constructor.
+    _value = value.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_NUMBER->GET
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RETURNING                      TYPE        F
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method get.
+    returning = _value.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_NUMBER->SET
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] VALUE                          TYPE        F
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method set.
+    _value = value.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method YEA_JSON_NUMBER->YEA_JSON_VALUE~TYPE
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RETURNING                      TYPE        I
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method yea_json_value~type.
+    returning = yea_json_types=>type_number.
+  endmethod.
+endclass.
+
