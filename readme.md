@@ -105,3 +105,165 @@ endif.
 " {"key1":null,"key2":false,"key3":true,"key4":"testing","key5":1.0000000000000000E+02,"key6":["zero","one","two"]}
 ```
 
+## ABAP Conversions
+
+### Instances
+
+All public attributes of a class are converted to JSON objects.
+
+```abap
+report.
+
+class foo definition.
+  public section.
+    methods constructor importing name type string.
+    data name type string.
+endclass.
+class foo implementation.
+  method constructor.
+    me->name = name.
+  endmethod.
+endclass.
+
+class bar definition.
+  public section.
+    data foolist type standard table of ref to foo.
+    data foo type ref to foo.
+    data age type int4.
+    methods constructor
+      importing
+        name type string
+        number type float.
+endclass.
+class bar implementation.
+  method constructor.
+    foo = new foo( name ).
+    age = number.
+    do 5 times.
+      data(str) = 'Index: ' && conv string( sy-index ).
+      append new foo( str ) to foolist.
+    enddo.
+  endmethod.
+endclass.
+
+start-of-selection.
+  data(new_bar) = new bar( name = 'testing' number = 100 ).
+  data(to_json) = yea_json_parser=>convert_object( new_bar ).
+  data(to_string) = yea_json_parser=>serialize( to_json ).
+  write : / to_string.
+```
+
+```js
+{
+	"AGE":1.0000000000000000E+02,
+	"FOO":{
+		"NAME":"testing"
+	},
+	"FOOLIST":[
+		{"NAME":"Index:1 "},
+		{"NAME":"Index:2 "},
+		{"NAME":"Index:3 "},
+		{"NAME":"Index:4 "},
+		{"NAME":"Index:5 "}
+	]
+}
+```
+
+### Structures
+
+Any structure can be converted to JSON objects. 
+
+```abap
+report.
+
+types: begin of _user_data,
+         name type string,
+         age type int4,
+         function type string,
+       end of _user_data.
+
+types: begin of _bro_data,
+         broname type string,
+         bro1 type _user_data,
+         bro2 type _user_data,
+         bro3 type _user_data,
+       end of _bro_data.
+
+data: team_of_bros type _bro_data.
+team_of_bros-broname = 'Team of Bros'.
+team_of_bros-bro1-name = 'Bro 1'.
+team_of_bros-bro1-age = 50.
+team_of_bros-bro1-function = 'Architect'.
+team_of_bros-bro2-name = 'Bro 2'.
+team_of_bros-bro2-age = 51.
+team_of_bros-bro2-function = 'Janitor'.
+team_of_bros-bro3-name = 'Bro 3'.
+team_of_bros-bro3-age = 19.
+team_of_bros-bro3-function = 'Unrelated'.
+
+data(to_json) = yea_json_parser=>convert_structure( team_of_bros ).
+data(to_string) = yea_json_parser=>serialize( to_json ).
+write : / to_string.
+```
+
+```js
+{
+	"BRONAME":"Team of Bros",
+	"BRO1":{
+		"NAME":"Bro 1",
+		"AGE":5.0000000000000000E+01,
+		"FUNCTION":"Architect"
+	},
+	"BRO2":{
+		"NAME":"Bro 2",
+		"AGE":5.1000000000000000E+01,
+		"FUNCTION":"Janitor"
+	},
+	"BRO3":{
+		"NAME":"Bro 3",
+		"AGE":1.9000000000000000E+01,
+		"FUNCTION":"Unrelated"
+	}
+}
+```
+
+### Tables
+
+A table, depending on how many components are avaliable, can also be converted to either a JSON array of values or a JSON array of objects.
+
+```abap
+report.
+
+data usr01 type standard table of usr01.
+select * from usr01 into table usr01.
+data(to_json) = yea_json_parser=>convert_table( usr01 ).
+data(to_string) = yea_json_parser=>serialize( to_json ).
+write : / to_string.
+```
+
+```js
+[
+	{
+		"MANDT": "001",
+		"BNAME": "BWDEVELOPER",
+		...
+	},
+	{
+		"MANDT": "001",
+		"BNAME": "DDIC",
+		...
+	},
+	{
+		"MANDT": "001",
+		"BNAME": "DEVELOPER",
+		...
+	},
+	{
+		"MANDT": "001",
+		"BNAME": "SAP*",
+		...
+	}
+]
+```
+
+
