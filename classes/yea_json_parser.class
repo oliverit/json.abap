@@ -16,6 +16,21 @@ class yea_json_parser definition
         !string          type string
       returning
         value(returning) type ref to yea_json_value .
+    class-methods convert_object
+      importing
+        !ref             type ref to object
+      returning
+        value(returning) type ref to yea_json_object .
+    class-methods convert_structure
+      importing
+        !structure       type any
+      returning
+        value(returning) type ref to yea_json_object .
+    class-methods convert_table
+      importing
+        !table           type table
+      returning
+        value(returning) type ref to yea_json_array .
   protected section.
   private section.
 
@@ -74,6 +89,227 @@ class yea_json_parser implementation.
 * +--------------------------------------------------------------------------------------</SIGNATURE>
   method class_constructor.
     _utf8_converter = cl_abap_conv_out_ce=>create( encoding = 'UTF-8' ).
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method YEA_JSON_PARSER=>CONVERT_OBJECT
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] REF                            TYPE REF TO OBJECT
+* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_OBJECT
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method convert_object.
+    data(class_descr) = cast cl_abap_classdescr(
+      cl_abap_classdescr=>describe_by_object_ref( p_object_ref = ref )
+    ).
+    data(attributes) = class_descr->attributes.
+    data(json_object) = new yea_json_object( ).
+    loop at attributes assigning field-symbol(<attr>) where visibility = 'U'.
+      case <attr>-type_kind.
+        when 'r'.
+          field-symbols <tref> type any.
+          assign ref->(<attr>-name) to <tref>.
+          data(cst) = cast object( <tref> ).
+          if ( cst is not bound ).
+            yea_json_util=>object_add_null(
+              object = json_object
+              name = conv string( <attr>-name )
+            ).
+            continue.
+          endif.
+          clear <tref>.
+          data(ores) = yea_json_parser=>convert_object( cst ).
+          yea_json_util=>object_add_object(
+            object = json_object
+            name = conv string( <attr>-name )
+            add = ores
+          ).
+        when 'F'.
+          field-symbols <fref> type float.
+          assign ref->(<attr>-name) to <fref>.
+          yea_json_util=>object_add_number(
+            object = json_object
+            name = conv string( <attr>-name )
+            number = <fref>
+          ).
+          clear <fref>.
+
+        when 'I'.
+          field-symbols <iref> type int4.
+          assign ref->(<attr>-name) to <iref>.
+          yea_json_util=>object_add_number(
+            object = json_object
+            name = conv string( <attr>-name )
+            number = conv float( <iref> )
+          ).
+          clear <iref>.
+
+        when 'g'.
+          field-symbols <gref> type string.
+          assign ref->(<attr>-name) to <gref>.
+          yea_json_util=>object_add_string(
+            object = json_object
+            name = conv string( <attr>-name )
+            value = <gref>
+          ).
+          clear <gref>.
+
+        when 'C'.
+          field-symbols <cref> type string.
+          assign ref->(<attr>-name) to <cref>.
+          yea_json_util=>object_add_string(
+            object = json_object
+            name = conv string( <attr>-name )
+            value = <cref>
+          ).
+          clear <cref>.
+
+
+        when 'u'.
+          field-symbols <uref> type any.
+          assign ref->(<attr>-name) to <uref>.
+          data(sres) = yea_json_parser=>convert_structure( <uref> ).
+          yea_json_util=>object_add_object(
+            object = json_object
+            name = conv string( <attr>-name )
+            add = sres
+          ).
+          clear <uref>.
+
+        when 'h'.
+          field-symbols <lref> type any table.
+          assign ref->(<attr>-name) to <lref>.
+          data(lres) = yea_json_parser=>convert_table( <lref> ).
+          yea_json_util=>object_add_array(
+            object = json_object
+            name = conv string( <attr>-name )
+            array = lres
+          ).
+
+          clear <lref>.
+
+      endcase.
+    endloop.
+    returning = json_object.
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method YEA_JSON_PARSER=>CONVERT_STRUCTURE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] STRUCTURE                      TYPE        ANY
+* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_OBJECT
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method convert_structure.
+    field-symbols <data> type any.
+    data(json_object) = new yea_json_object( ).
+    data(struct_descr) = cast cl_abap_structdescr(
+      cl_abap_structdescr=>describe_by_data( structure )
+    ).
+    data(components) = struct_descr->components.
+    loop at components assigning field-symbol(<comp>).
+      assign component <comp>-name of structure structure to <data>.
+      case <comp>-type_kind.
+        when 'r'.
+          if ( <data> is bound ).
+            yea_json_util=>object_add_null(
+              object = json_object
+              name = conv string( <comp>-name )
+            ).
+            continue.
+          endif.
+          data(rres) = yea_json_parser=>convert_object( <data> ).
+          yea_json_util=>object_add_object(
+            object = json_object
+            name = conv string( <comp>-name )
+            add = rres
+          ).
+        when 'F'.
+          yea_json_util=>object_add_number(
+            object = json_object
+            name = conv string( <comp>-name )
+            number = conv float( <data> )
+          ).
+        when 'I'.
+          yea_json_util=>object_add_number(
+            object = json_object
+            name = conv string( <comp>-name )
+            number = conv float( <data> )
+          ).
+        when 'g'.
+          yea_json_util=>object_add_string(
+            object = json_object
+            name = conv string( <comp>-name )
+            value = conv string( <data> )
+          ).
+        when 'C'.
+          yea_json_util=>object_add_string(
+            object = json_object
+            name = conv string( <comp>-name )
+            value = conv string( <data> )
+          ).
+        when 'u'.
+          data(ures) = yea_json_parser=>convert_structure( <data> ).
+          yea_json_util=>object_add_object(
+            object = json_object
+            name = conv string( <comp>-name )
+            add = ures
+          ).
+        when 'h'.
+          data(hres) = yea_json_parser=>convert_table( <data> ).
+          yea_json_util=>object_add_array(
+            object = json_object
+            name = conv string( <comp>-name )
+            array = hres
+          ).
+      endcase.
+
+    endloop.
+    returning = json_object.
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method YEA_JSON_PARSER=>CONVERT_TABLE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] TABLE                          TYPE        TABLE
+* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_ARRAY
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method convert_table.
+    returning = new yea_json_array( ).
+    data(table_descr) = cast cl_abap_tabledescr(
+      cl_abap_tabledescr=>describe_by_data( table )
+    ).
+    if ( lines( table ) = 0 ).
+      return.
+    endif.
+
+    loop at table assigning field-symbol(<row>).
+      data(type_descr) = cast cl_abap_typedescr(
+        cl_abap_typedescr=>describe_by_data( <row> )
+      ).
+      case type_descr->type_kind.
+        when 'r'.
+          data(rres) = yea_json_parser=>convert_object( cast object( <row> ) ).
+          yea_json_util=>array_append_object( array = returning object = rres ).
+        when 'F'.
+          yea_json_util=>array_append_number( array = returning number = conv float( <row> ) ).
+        when 'I'.
+          yea_json_util=>array_append_number( array = returning number = conv float( <row> ) ).
+        when 'u'.
+          data(ures) = yea_json_parser=>convert_structure( <row> ).
+          yea_json_util=>array_append_object( array = returning object = ures ).
+        when 'h'.
+          data(hres) = yea_json_parser=>convert_table( <row> ).
+          yea_json_util=>array_append_array( array = returning add = hres ).
+        when 'g'.
+          data(sres) = conv string( <row> ).
+          yea_json_util=>array_append_string( array = returning string = sres ).
+        when 'C'.
+          yea_json_util=>array_append_string( array = returning string = conv string( <row> ) ).
+      endcase.
+    endloop.
   endmethod.
 
 
