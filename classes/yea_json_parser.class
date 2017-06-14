@@ -1,4 +1,4 @@
-class yea_json_parser definition
+ass yea_json_parser definition
   public
   final
   create public .
@@ -175,7 +175,14 @@ class yea_json_parser implementation.
             add = sres
           ).
           clear <uref>.
-
+        when 'v'.
+          assign ref->(<attr>-name) to <uref>.
+          sres = yea_json_parser=>convert_structure( <uref> ).
+          yea_json_util=>object_add_object(
+            object = json_object
+            name = conv string( <attr>-name )
+            add = sres
+          ).
         when 'h'.
           field-symbols <lref> type any table.
           assign ref->(<attr>-name) to <lref>.
@@ -256,6 +263,13 @@ class yea_json_parser implementation.
             name = conv string( <comp>-name )
             add = ures
           ).
+        when 'v'.
+          data(vres) = yea_json_parser=>convert_structure( <data> ).
+          yea_json_util=>object_add_object(
+            object = json_object
+            name = conv string( <comp>-name )
+            add = vres
+          ).
         when 'h'.
           data(hres) = yea_json_parser=>convert_table( <data> ).
           yea_json_util=>object_add_array(
@@ -300,6 +314,9 @@ class yea_json_parser implementation.
         when 'u'.
           data(ures) = yea_json_parser=>convert_structure( <row> ).
           yea_json_util=>array_append_object( array = returning object = ures ).
+        when 'v'.
+          data(vres) = yea_json_parser=>convert_structure( <row> ).
+          yea_json_util=>array_append_object( array = returning object = vres ).
         when 'h'.
           data(hres) = yea_json_parser=>convert_table( <row> ).
           yea_json_util=>array_append_array( array = returning add = hres ).
