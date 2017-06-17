@@ -19,6 +19,7 @@ class yea_json_parser definition
     class-methods abap_to_json
       importing
         !data            type any
+        !stack           type yea_object_stack optional
       returning
         value(returning) type ref to yea_json_value .
   protected section.
@@ -77,10 +78,13 @@ class yea_json_parser implementation.
 * | Static Public Method YEA_JSON_PARSER=>ABAP_TO_JSON
 * +-------------------------------------------------------------------------------------------------+
 * | [--->] DATA                           TYPE        ANY
+* | [--->] STACK                          TYPE        YEA_OBJECT_STACK(optional)
 * | [<-()] RETURNING                      TYPE REF TO YEA_JSON_VALUE
 * +--------------------------------------------------------------------------------------</SIGNATURE>
   method abap_to_json.
 
+    data(_stack) = stack.
+    data name_bucket type string.
     data number_convert type float.
     data oref type ref to object.
     data json_res type ref to yea_json_value.
@@ -121,7 +125,10 @@ class yea_json_parser implementation.
              type_descr->type_kind = cl_abap_typedescr=>typekind_csequence or
              type_descr->type_kind = cl_abap_typedescr=>typekind_string or
              type_descr->type_kind = cl_abap_typedescr=>typekind_date ).
-      returning = new yea_json_string( conv string( data ) ).
+      data(string_cast) = conv string( data ).
+      replace all occurrences of '\' in string_cast with '\\'.
+      replace all occurrences of '"' in string_cast with '\"'.
+      returning = new yea_json_string( string_cast ).
 
       " Structures
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_struct1 or
@@ -133,10 +140,12 @@ class yea_json_parser implementation.
       ).
       loop at struct_descr->components assigning field-symbol(<cmp>).
         assign component <cmp>-name of structure data to field-symbol(<data>).
-        json_res = yea_json_parser=>abap_to_json( <data> ).
+        json_res = yea_json_parser=>abap_to_json( data = <data> stack = stack ).
+        name_bucket = conv string( <cmp>-name ).
+        translate name_bucket to lower case.
         json_obj_cast->add(
           new yea_json_pair(
-            name = conv string( <cmp>-name )
+            name = name_bucket
             value = json_res
           )
         ).
@@ -148,7 +157,7 @@ class yea_json_parser implementation.
       json_arr_cast ?= returning.
       assign data to <table>.
       loop at <table> assigning field-symbol(<row>).
-        json_res = yea_json_parser=>abap_to_json( <row> ).
+        json_res = yea_json_parser=>abap_to_json( data = <row> stack = stack ).
         json_arr_cast->append( json_res ).
       endloop.
 
@@ -161,12 +170,20 @@ class yea_json_parser implementation.
         data(class_descr) = cast cl_abap_classdescr(
           cl_abap_classdescr=>describe_by_object_ref( oref )
         ).
+        append oref to _stack.
         loop at class_descr->attributes assigning field-symbol(<attr>) where visibility = 'U'.
           assign oref->(<attr>-name) to <oattr>.
-          json_res = yea_json_parser=>abap_to_json( <oattr> ).
+          " Don't add classes already in this stack
+          read table stack with key table_line = oref transporting no fields.
+          if ( sy-subrc = 0 ).
+            continue.
+          endif.
+          json_res = yea_json_parser=>abap_to_json( data = <oattr> stack = _stack ).
+          name_bucket = conv string( <attr>-name ).
+          translate name_bucket to lower case.
           json_obj_cast->add(
             new yea_json_pair(
-              name = conv string( <attr>-name )
+              name = name_bucket
               value = json_res
             )
           ).
@@ -645,7 +662,8 @@ class yea_json_parser implementation.
 * | [<-()] RETURNING                      TYPE        STRING
 * +--------------------------------------------------------------------------------------</SIGNATURE>
   method _serialize_string.
-    returning = '"' && string->get( ) && '"'.
+    data(str_out) = string->get( ).
+    returning = '"' && str_out && '"'.
   endmethod.
 
 

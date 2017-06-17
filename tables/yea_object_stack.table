@@ -1,0 +1,2 @@
+begin of: yea_object_stack type standard table of ref to object.
+
