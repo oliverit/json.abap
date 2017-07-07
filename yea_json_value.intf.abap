@@ -4,4 +4,3 @@ interface yea_json_value
     returning
       value(returning) type i .
 endinterface.
-
