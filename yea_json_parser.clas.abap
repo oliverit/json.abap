@@ -562,16 +562,14 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
     pck_f = flt.
     pck_w = trunc( pck_f ).
     if ( flt > pck_w and flt > 0 ).
-      returning = pck_f.
+      returning = flt.
     elseif ( flt < pck_w and flt < 0 ).
-      returning = pck_f.
+      returning = flt.
+    elseif ( flt = 0 ).
+      returning = '0'.
     else.
       returning = pck_w.
     endif.
-    shift returning right deleting trailing space.
-    shift returning left deleting leading space.
-    shift returning right deleting trailing '0'.
-    shift returning left deleting leading '0'.
     shift returning right deleting trailing space.
     shift returning left deleting leading space.
   endmethod.
