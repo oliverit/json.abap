@@ -555,16 +555,25 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
 
 
   method _SERIALIZE_NUMBER.
-    data(as_int) = conv int4( number->get( ) ).
-    if ( number->get( ) > as_int and as_int > 0 ).
-      returning = number->get( ).
-    elseif ( number->get( ) < as_int and as_int < 0 ).
-      returning = number->get( ).
+    " there has to be a better way
+    data pck_f(16) type p decimals 8.
+    data pck_w(16) type p decimals 0.
+    data(flt) = number->get( ).
+    pck_f = flt.
+    pck_w = trunc( pck_f ).
+    if ( flt > pck_w and flt > 0 ).
+      returning = pck_f.
+    elseif ( flt < pck_w and flt < 0 ).
+      returning = pck_f.
     else.
-      returning = as_int.
-      shift returning right deleting trailing space.
-      shift returning left deleting leading space.
+      returning = pck_w.
     endif.
+    shift returning right deleting trailing space.
+    shift returning left deleting leading space.
+    shift returning right deleting trailing '0'.
+    shift returning left deleting leading '0'.
+    shift returning right deleting trailing space.
+    shift returning left deleting leading space.
   endmethod.
 
 
