@@ -23,32 +23,32 @@ public section.
   methods SIZE
     returning
       value(RETURNING) type INT4 .
-  methods TO_STRING
+  methods STRING
     importing
       !INDEX type INT4
     returning
       value(RETURNING) type STRING .
-  methods TO_INT
+  methods INTEGER
     importing
       !INDEX type INT4
     returning
       value(RETURNING) type INT4 .
-  methods TO_FLOAT
+  methods FLOAT
     importing
       !INDEX type INT4
     returning
       value(RETURNING) type F .
-  methods TO_BOOLEAN
+  methods BOOLEAN
     importing
       !INDEX type INT4
     returning
       value(RETURNING) type ABAP_BOOL .
-  methods TO_OBJECT
+  methods OBJECT
     importing
       !INDEX type INT4
     returning
       value(RETURNING) type ref to YEA_JSON_OBJECT .
-  methods TO_ARRAY
+  methods ARRAY
     importing
       !INDEX type INT4
     returning
@@ -71,10 +71,58 @@ CLASS YEA_JSON_ARRAY IMPLEMENTATION.
   endmethod.
 
 
+  method ARRAY.
+    try.
+      data(idx) = index.
+      returning = cast yea_json_array( _values[ idx ] ).
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
+  method BOOLEAN.
+    try.
+      data(idx) = index.
+      returning = cast yea_json_boolean( _values[ idx ] )->get( ).
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
+  method FLOAT.
+    try.
+      data(idx) = index.
+      returning = cast yea_json_number( _values[ idx ] )->get( ).
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
   method get.
     try.
         returning = _values[ index ].
       catch cx_root.
+    endtry.
+  endmethod.
+
+
+  method INTEGER.
+    try.
+      data(idx) = index.
+      data(cst) = cast yea_json_number( _values[ idx ] ).
+      data intval type int4.
+      intval = cst->get( ).
+      returning = intval.
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
+  method OBJECT.
+    try.
+      data(idx) = index.
+      returning = cast yea_json_object( _values[ idx ] ).
+    catch cx_root.
     endtry.
   endmethod.
 
@@ -91,57 +139,34 @@ CLASS YEA_JSON_ARRAY IMPLEMENTATION.
   endmethod.
 
 
-  method TO_ARRAY.
+  method STRING.
     try.
-      data(idx) = index + 1.
-      returning = cast yea_json_array( _values[ idx ] ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method TO_BOOLEAN.
-    try.
-      data(idx) = index + 1.
-      returning = cast yea_json_boolean( _values[ idx ] )->get( ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method TO_FLOAT.
-    try.
-      data(idx) = index + 1.
-      returning = cast yea_json_number( _values[ idx ] )->get( ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method TO_INT.
-    try.
-      data(idx) = index + 1.
-      returning = cast yea_json_number( _values[ idx ] )->get( ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method TO_OBJECT.
-    try.
-      data(idx) = index + 1.
-      returning = cast yea_json_object( _values[ idx ] ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method TO_STRING.
-    try.
-      data(idx) = index + 1.
+      data(idx) = index.
       returning = cast yea_json_string( _values[ idx ] )->get( ).
     catch cx_root.
     endtry.
+  endmethod.
+
+
+  method YEA_JSON_VALUE~EQUAL.
+
+    if ( me->yea_json_value~type( ) = object->type( ) ).
+      data(arr_cast) = cast yea_json_array( object ).
+      if ( arr_cast->size( ) <> size( ) ).
+        return.
+      endif.
+
+      do me->size( ) times.
+        data(el_me) = me->get( sy-index ).
+        data(el_ob) = arr_cast->get( sy-index ).
+        if ( el_me->equal( el_ob ) = abap_false ).
+          return.
+        endif.
+      enddo.
+
+      returning = abap_true.
+
+    endif.
   endmethod.
 
 

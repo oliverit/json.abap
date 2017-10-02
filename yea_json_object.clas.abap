@@ -22,7 +22,7 @@ public section.
       !PAIR type ref to YEA_JSON_PAIR
     returning
       value(RETURNING) type ABAP_BOOL .
-  methods GET
+  methods PAIR
     importing
       !NAME type STRING
     returning
@@ -30,32 +30,32 @@ public section.
   methods KEYS
     returning
       value(RETURNING) type STRINGTAB .
-  methods GET_INT
+  methods INTEGER
     importing
       !KEY type STRING
     returning
       value(RETURNING) type INT4 .
-  methods GET_FLOAT
+  methods FLOAT
     importing
       !KEY type STRING
     returning
       value(RETURNING) type F .
-  methods GET_STRING
+  methods STRING
     importing
       !KEY type STRING
     returning
       value(RETURNING) type STRING .
-  methods GET_BOOLEAN
+  methods BOOLEAN
     importing
       !KEY type STRING
     returning
       value(RETURNING) type ABAP_BOOL .
-  methods GET_ARRAY
+  methods ARRAY
     importing
       !KEY type STRING
     returning
       value(RETURNING) type ref to YEA_JSON_ARRAY .
-  methods GET_OBJECT
+  methods OBJECT
     importing
       !KEY type STRING
     returning
@@ -82,57 +82,25 @@ CLASS YEA_JSON_OBJECT IMPLEMENTATION.
   endmethod.
 
 
-  method GET.
+  method ARRAY.
     try.
-      returning = me->_keys[ name = name ]-pair.
+      returning = cast yea_json_array( me->pair( key )->value( ) ).
     catch cx_root.
     endtry.
   endmethod.
 
 
-  method GET_ARRAY.
+  method BOOLEAN.
     try.
-      returning = cast yea_json_array( me->get( key )->value( ) ).
+      returning = cast yea_json_boolean( me->pair( key )->value( ) )->get( ).
     catch cx_root.
     endtry.
   endmethod.
 
 
-  method GET_BOOLEAN.
+  method FLOAT.
     try.
-      returning = cast yea_json_boolean( me->get( key )->value( ) )->get( ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method GET_FLOAT.
-    try.
-      returning = cast yea_json_number( me->get( key )->value( ) )->get( ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method GET_INT.
-    try.
-      returning = cast yea_json_number( me->get( key )->value( ) )->get( ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method GET_OBJECT.
-    try.
-      returning = cast yea_json_object( me->get( key )->value( ) ).
-    catch cx_root.
-    endtry.
-  endmethod.
-
-
-  method GET_STRING.
-    try.
-      returning = cast yea_json_string( me->get( key )->value( ) )->get( ).
+      returning = cast yea_json_number( me->pair( key )->value( ) )->get( ).
     catch cx_root.
     endtry.
   endmethod.
@@ -149,6 +117,14 @@ CLASS YEA_JSON_OBJECT IMPLEMENTATION.
   endmethod.
 
 
+  method INTEGER.
+    try.
+      returning = cast yea_json_number( me->pair( key )->value( ) )->get( ).
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
   method KEYS.
     loop at me->_keys assigning field-symbol(<k>).
       append <k>-name to returning.
@@ -156,10 +132,41 @@ CLASS YEA_JSON_OBJECT IMPLEMENTATION.
   endmethod.
 
 
+  method OBJECT.
+    try.
+      returning = cast yea_json_object( me->pair( key )->value( ) ).
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
+  method PAIR.
+    try.
+      returning = me->_keys[ name = name ]-pair.
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
   method REMOVE.
     if ( pair is bound ).
       delete me->_keys where name = pair->name( ).
       check sy-subrc = 0.
+      returning = abap_true.
+    endif.
+  endmethod.
+
+
+  method STRING.
+    try.
+      returning = cast yea_json_string( me->pair( key )->value( ) )->get( ).
+    catch cx_root.
+    endtry.
+  endmethod.
+
+
+  method yea_json_value~equal.
+    if ( me = object ).
       returning = abap_true.
     endif.
   endmethod.

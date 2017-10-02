@@ -57,11 +57,6 @@ private section.
       !OBJECT type ref to YEA_JSON_OBJECT
     returning
       value(RETURNING) type STRING .
-  class-methods _SERIALIZE_PAIR
-    importing
-      !PAIR type ref to YEA_JSON_PAIR
-    returning
-      value(RETURNING) type STRING .
   class-methods _UTF8_BYTE
     importing
       !CHAR type CHAR1
@@ -560,7 +555,16 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
 
 
   method _SERIALIZE_NUMBER.
-    returning = number->get( ).
+    data(as_int) = conv int4( number->get( ) ).
+    if ( number->get( ) > as_int and as_int > 0 ).
+      returning = number->get( ).
+    elseif ( number->get( ) < as_int and as_int < 0 ).
+      returning = number->get( ).
+    else.
+      returning = as_int.
+      shift returning right deleting trailing space.
+      shift returning left deleting leading space.
+    endif.
   endmethod.
 
 
@@ -570,7 +574,7 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
     data(keys) = object->keys( ).
     data json_pairs type stringtab.
     loop at keys assigning field-symbol(<key>).
-      data(pair) = object->get( <key> ).
+      data(pair) = object->pair( <key> ).
       template = tpl.
       replace first occurrence of '%1' in template with pair->name( ).
       replace first occurrence of '%2' in template with serialize( pair->value( ) ).
@@ -588,11 +592,6 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
       index = index + 1.
     enddo.
     returning = '{' && output_line && '}'.
-  endmethod.
-
-
-  method _serialize_pair.
-
   endmethod.
 
 
