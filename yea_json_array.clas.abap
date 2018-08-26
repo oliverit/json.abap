@@ -12,9 +12,7 @@ public section.
       !VALUE type ref to YEA_JSON_VALUE .
   methods REMOVE
     importing
-      !VALUE type ref to YEA_JSON_VALUE
-    returning
-      value(RETURNING) type ABAP_BOOL .
+      !INDEX type INT4.
   methods GET
     importing
       !INDEX type INT4
@@ -128,9 +126,7 @@ CLASS YEA_JSON_ARRAY IMPLEMENTATION.
 
 
   method remove.
-    delete _values where table_line = value.
-    check sy-subrc = 0.
-    returning = abap_true.
+    delete _values index index.
   endmethod.
 
 

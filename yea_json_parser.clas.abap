@@ -108,11 +108,17 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
          type_descr->type_kind = cl_abap_typedescr=>typekind_packed ).
       returning = new yea_json_number( conv float( data ) ).
 
+    elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_hex or
+             type_descr->type_kind = cl_abap_typedescr=>typekind_xstring or
+             type_descr->type_kind = cl_abap_typedescr=>typekind_xsequence ).
+      returning = new yea_json_string( '#' && conv string( data ) ).
+
     " Text (Date fields are text)
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_char or
              type_descr->type_kind = cl_abap_typedescr=>typekind_csequence or
              type_descr->type_kind = cl_abap_typedescr=>typekind_string or
-             type_descr->type_kind = cl_abap_typedescr=>typekind_date ).
+             type_descr->type_kind = cl_abap_typedescr=>typekind_date or
+             type_descr->type_kind = cl_abap_typedescr=>typekind_time ).
       data(string_cast) = conv string( data ).
       replace all occurrences of '\' in string_cast with '\\'.
       replace all occurrences of '"' in string_cast with '\"'.
@@ -559,6 +565,10 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
     data pck_f(16) type p decimals 8.
     data pck_w(16) type p decimals 0.
     data(flt) = number->get( ).
+    data(isNegative) = abap_false.
+    if ( flt < 0 ).
+      isNegative = abap_true.
+    endif.
     pck_f = flt.
     pck_w = trunc( pck_f ).
     if ( flt > pck_w and flt > 0 ).
@@ -572,6 +582,10 @@ CLASS YEA_JSON_PARSER IMPLEMENTATION.
     endif.
     shift returning right deleting trailing space.
     shift returning left deleting leading space.
+    if ( isNegative = abap_true ).
+      replace all occurrences of '-' in returning with ''.
+      returning = '-' && returning.
+    endif.
   endmethod.
 
 
