@@ -1,87 +1,75 @@
-class yea_json_parser definition
+class YEA_JSON_PARSER definition
   public
   final
   create public .
 
-  public section.
+public section.
 
-    class-methods class_constructor .
-    class-methods serialize
-      importing
-        !json            type ref to yea_json_value
-      returning
-        value(returning) type string .
-    class-methods deserialize
-      importing
-        !string          type string
-      returning
-        value(returning) type ref to yea_json_value .
-    class-methods abap_to_json
-      importing
-        !data            type any
-        !stack           type yea_object_stack optional
-      returning
-        value(returning) type ref to yea_json_value .
-  protected section.
-  private section.
+  class-methods CLASS_CONSTRUCTOR .
+  class-methods SERIALIZE
+    importing
+      !JSON type ref to YEA_JSON_VALUE
+    returning
+      value(RETURNING) type STRING .
+  class-methods DESERIALIZE
+    importing
+      !STRING type STRING
+    returning
+      value(RETURNING) type ref to YEA_JSON_VALUE .
+  class-methods ABAP_TO_JSON
+    importing
+      !DATA type ANY
+      !STACK type YEA_OBJECT_STACK optional
+    returning
+      value(RETURNING) type ref to YEA_JSON_VALUE .
+protected section.
+private section.
 
-    class-data _utf8_converter type ref to cl_abap_conv_out_ce .
+  class-data _UTF8_CONVERTER type ref to CL_ABAP_CONV_OUT_CE .
 
-    class-methods _serialize_null
-      importing
-        !null            type ref to yea_json_null
-      returning
-        value(returning) type string .
-    class-methods _serialize_boolean
-      importing
-        !boolean         type ref to yea_json_boolean
-      returning
-        value(returning) type string .
-    class-methods _serialize_string
-      importing
-        !string          type ref to yea_json_string
-      returning
-        value(returning) type string .
-    class-methods _serialize_number
-      importing
-        !number          type ref to yea_json_number
-      returning
-        value(returning) type string .
-    class-methods _serialize_array
-      importing
-        !array           type ref to yea_json_array
-      returning
-        value(returning) type string .
-    class-methods _serialize_object
-      importing
-        !object          type ref to yea_json_object
-      returning
-        value(returning) type string .
-    class-methods _serialize_pair
-      importing
-        !pair            type ref to yea_json_pair
-      returning
-        value(returning) type string .
-    class-methods _utf8_byte
-      importing
-        !char            type char1
-      returning
-        value(returning) type xstring .
-endclass.
+  class-methods _SERIALIZE_NULL
+    importing
+      !NULL type ref to YEA_JSON_NULL
+    returning
+      value(RETURNING) type STRING .
+  class-methods _SERIALIZE_BOOLEAN
+    importing
+      !BOOLEAN type ref to YEA_JSON_BOOLEAN
+    returning
+      value(RETURNING) type STRING .
+  class-methods _SERIALIZE_STRING
+    importing
+      !STRING type ref to YEA_JSON_STRING
+    returning
+      value(RETURNING) type STRING .
+  class-methods _SERIALIZE_NUMBER
+    importing
+      !NUMBER type ref to YEA_JSON_NUMBER
+    returning
+      value(RETURNING) type STRING .
+  class-methods _SERIALIZE_ARRAY
+    importing
+      !ARRAY type ref to YEA_JSON_ARRAY
+    returning
+      value(RETURNING) type STRING .
+  class-methods _SERIALIZE_OBJECT
+    importing
+      !OBJECT type ref to YEA_JSON_OBJECT
+    returning
+      value(RETURNING) type STRING .
+  class-methods _UTF8_BYTE
+    importing
+      !CHAR type CHAR1
+    returning
+      value(RETURNING) type XSTRING .
+ENDCLASS.
 
 
 
-class yea_json_parser implementation.
+CLASS YEA_JSON_PARSER IMPLEMENTATION.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Public Method YEA_JSON_PARSER=>ABAP_TO_JSON
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] DATA                           TYPE        ANY
-* | [--->] STACK                          TYPE        YEA_OBJECT_STACK(optional)
-* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_VALUE
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method abap_to_json.
+  method ABAP_TO_JSON.
 
     data(_stack) = stack.
     data name_bucket type string.
@@ -102,7 +90,7 @@ class yea_json_parser implementation.
       boolean_cast = data.
       returning = new yea_json_boolean( boolean_cast ).
 
-      " Numbers
+    " Numbers
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_int or
          type_descr->type_kind = cl_abap_typedescr=>typekind_int1 or
          type_descr->type_kind = cl_abap_typedescr=>typekind_int2 or
@@ -120,17 +108,23 @@ class yea_json_parser implementation.
          type_descr->type_kind = cl_abap_typedescr=>typekind_packed ).
       returning = new yea_json_number( conv float( data ) ).
 
-      " Text (Date fields are text)
+    elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_hex or
+             type_descr->type_kind = cl_abap_typedescr=>typekind_xstring or
+             type_descr->type_kind = cl_abap_typedescr=>typekind_xsequence ).
+      returning = new yea_json_string( '#' && conv string( data ) ).
+
+    " Text (Date fields are text)
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_char or
              type_descr->type_kind = cl_abap_typedescr=>typekind_csequence or
              type_descr->type_kind = cl_abap_typedescr=>typekind_string or
-             type_descr->type_kind = cl_abap_typedescr=>typekind_date ).
+             type_descr->type_kind = cl_abap_typedescr=>typekind_date or
+             type_descr->type_kind = cl_abap_typedescr=>typekind_time ).
       data(string_cast) = conv string( data ).
       replace all occurrences of '\' in string_cast with '\\'.
       replace all occurrences of '"' in string_cast with '\"'.
       returning = new yea_json_string( string_cast ).
 
-      " Structures
+    " Structures
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_struct1 or
              type_descr->type_kind = cl_abap_typedescr=>typekind_struct2 ).
       returning = new yea_json_object( ).
@@ -151,7 +145,7 @@ class yea_json_parser implementation.
         ).
       endloop.
 
-      " Tables
+    " Tables
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_table ).
       returning = new yea_json_array( ).
       json_arr_cast ?= returning.
@@ -161,7 +155,7 @@ class yea_json_parser implementation.
         json_arr_cast->append( json_res ).
       endloop.
 
-      " Object reference
+    " Object reference
     elseif ( type_descr->type_kind = cl_abap_typedescr=>typekind_oref ).
       if ( data is bound ).
         returning = new yea_json_object( ).
@@ -196,21 +190,11 @@ class yea_json_parser implementation.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Public Method YEA_JSON_PARSER=>CLASS_CONSTRUCTOR
-* +-------------------------------------------------------------------------------------------------+
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method class_constructor.
+  method CLASS_CONSTRUCTOR.
     _utf8_converter = cl_abap_conv_out_ce=>create( encoding = 'UTF-8' ).
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Public Method YEA_JSON_PARSER=>DESERIALIZE
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] STRING                         TYPE        STRING
-* | [<-()] RETURNING                      TYPE REF TO YEA_JSON_VALUE
-* +--------------------------------------------------------------------------------------</SIGNATURE>
   method deserialize.
 
     data next type abap_bool.
@@ -245,7 +229,7 @@ class yea_json_parser implementation.
       endif.
 
       case char.
-        when '{'. " Object Open
+        when yea_json_types=>object_open. " '{'. " Object Open
 
           " Push new object
           data(new_object) = new yea_json_object( ).
@@ -264,7 +248,7 @@ class yea_json_parser implementation.
           top_ref = new_object.
           state = '{'.
 
-        when '}'. " Object Close
+        when yea_json_types=>object_close. " '}'. " Object Close
 
           if ( state is initial ).
             return.
@@ -288,7 +272,7 @@ class yea_json_parser implementation.
           read table stack index lines( stack ) into top_ref.
           state = '}'.
 
-        when '['. " Array Open
+        when yea_json_types=>array_open. " Array Open
 
           " Push new array
           data(new_array) = new yea_json_array( ).
@@ -307,7 +291,7 @@ class yea_json_parser implementation.
           top_ref = new_array.
           state = '['.
 
-        when ']'. " Array Close
+        when yea_json_types=>array_close. " Array Close
 
           if ( state is initial ).
             return.
@@ -335,7 +319,7 @@ class yea_json_parser implementation.
           read table stack index lines( stack ) into top_ref.
           state = ']'.
 
-        when '"'. " String Value
+        when yea_json_types=>quote. " String Value
           " Scan to the next character
           data(escape) = abap_false.
           data(string_start) = position.
@@ -382,7 +366,7 @@ class yea_json_parser implementation.
           clear result.
           state = '"'.
 
-        when ':'. " Key:Value Seperator
+        when yea_json_types=>colon. " ':'. " Key:Value Seperator
           if ( top_ref is bound and top_ref->type( ) <> yea_json_types=>type_object ).
             return.
           endif.
@@ -391,7 +375,7 @@ class yea_json_parser implementation.
             return.
           endif.
           state = ':'.
-        when ','. " Value Separator
+        when yea_json_types=>comma. " ','. " Value Separator
           state = ','.
         when others.
 
@@ -524,12 +508,6 @@ class yea_json_parser implementation.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Public Method YEA_JSON_PARSER=>SERIALIZE
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] JSON                           TYPE REF TO YEA_JSON_VALUE
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
   method serialize.
     data(type) = json->type( ).
     case type.
@@ -549,12 +527,6 @@ class yea_json_parser implementation.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_ARRAY
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] ARRAY                          TYPE REF TO YEA_JSON_ARRAY
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
   method _serialize_array.
     data(size) = array->size( ).
     data(index) = 1.
@@ -573,13 +545,7 @@ class yea_json_parser implementation.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_BOOLEAN
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] BOOLEAN                        TYPE REF TO YEA_JSON_BOOLEAN
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method _serialize_boolean.
+  method _SERIALIZE_BOOLEAN.
     case boolean->get( ).
       when abap_true.
         returning = 'true'.
@@ -589,41 +555,47 @@ class yea_json_parser implementation.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_NULL
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] NULL                           TYPE REF TO YEA_JSON_NULL
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method _serialize_null.
+  method _SERIALIZE_NULL.
     returning = 'null'.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_NUMBER
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] NUMBER                         TYPE REF TO YEA_JSON_NUMBER
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method _serialize_number.
-    returning = number->get( ).
+  method _SERIALIZE_NUMBER.
+    " there has to be a better way
+    data pck_f(16) type p decimals 8.
+    data pck_w(16) type p decimals 0.
+    data(flt) = number->get( ).
+    data(isNegative) = abap_false.
+    if ( flt < 0 ).
+      isNegative = abap_true.
+    endif.
+    pck_f = flt.
+    pck_w = trunc( pck_f ).
+    if ( flt > pck_w and flt > 0 ).
+      returning = flt.
+    elseif ( flt < pck_w and flt < 0 ).
+      returning = flt.
+    elseif ( flt = 0 ).
+      returning = '0'.
+    else.
+      returning = pck_w.
+    endif.
+    shift returning right deleting trailing space.
+    shift returning left deleting leading space.
+    if ( isNegative = abap_true ).
+      replace all occurrences of '-' in returning with ''.
+      returning = '-' && returning.
+    endif.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_OBJECT
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] OBJECT                         TYPE REF TO YEA_JSON_OBJECT
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method _serialize_object.
+  method _SERIALIZE_OBJECT.
     data tpl type string value '"%1":%2'.
     data template type string.
     data(keys) = object->keys( ).
     data json_pairs type stringtab.
     loop at keys assigning field-symbol(<key>).
-      data(pair) = object->get( <key> ).
+      data(pair) = object->pair( <key> ).
       template = tpl.
       replace first occurrence of '%1' in template with pair->name( ).
       replace first occurrence of '%2' in template with serialize( pair->value( ) ).
@@ -644,39 +616,15 @@ class yea_json_parser implementation.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_PAIR
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] PAIR                           TYPE REF TO YEA_JSON_PAIR
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method _serialize_pair.
-
-  endmethod.
-
-
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_SERIALIZE_STRING
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] STRING                         TYPE REF TO YEA_JSON_STRING
-* | [<-()] RETURNING                      TYPE        STRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
   method _serialize_string.
     data(str_out) = string->get( ).
     returning = '"' && str_out && '"'.
   endmethod.
 
 
-* <SIGNATURE>---------------------------------------------------------------------------------------+
-* | Static Private Method YEA_JSON_PARSER=>_UTF8_BYTE
-* +-------------------------------------------------------------------------------------------------+
-* | [--->] CHAR                           TYPE        CHAR1
-* | [<-()] RETURNING                      TYPE        XSTRING
-* +--------------------------------------------------------------------------------------</SIGNATURE>
-  method _utf8_byte.
+  method _UTF8_BYTE.
     _utf8_converter->reset( ).
     _utf8_converter->write( data = char ).
     returning = _utf8_converter->get_buffer( ).
   endmethod.
-endclass.
-
+ENDCLASS.

@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+    <VERSION>1</VERSION>
+    <LANGU>E</LANGU>
+    <DESCRIPT>Parses JSON</DESCRIPT>
+    <EXPOSURE>2</EXPOSURE>
+    <STATE>1</STATE>
+    <CLSFINAL>X</CLSFINAL>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+     <CMPNAME>ABAP_TO_JSON</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Deep convert an ABAP structure/table/class/value to JSON</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+     <CMPNAME>CLASS_CONSTRUCTOR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>CLASS_CONSTRUCTOR</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+     <CMPNAME>DESERIALIZE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert a string to a json object</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+     <CMPNAME>SERIALIZE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert a JSON object to a string</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+     <CMPNAME>_UTF8_BYTE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Char to UTF-8 Byte value</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>YEA_JSON_PARSER</CLSNAME>
+     <CMPNAME>_UTF8_CONVERTER</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Code Page and Endian Conversion (System Format -&gt; External)</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>
